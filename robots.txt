@@ -6,7 +6,6 @@ Allow: *.jpg
 Disallow: /feed/turbopage/
 Disallow: /payments/
 Disallow: /feed/turbopost/
-Disallow: /feed/turbopost/*
 Disallow: /wp-login.php
 Disallow: /wp-register.php
 Disallow: /wp-json/
