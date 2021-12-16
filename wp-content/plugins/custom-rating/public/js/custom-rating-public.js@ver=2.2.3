@@ -1,0 +1,237 @@
+document.addEventListener('DOMContentLoaded', function () {
+    customRatingMain();
+});
+
+// Activate custom rating
+
+function customRatingMain() {
+    let custom_rating = document.querySelectorAll('.custom-rating:not(.deactivate)');
+    if (custom_rating.length > 0) {
+        setParams.call(custom_rating[0]);
+        customRatingRun();
+    }
+}
+
+function customRatingRun() {
+    let custom_rating = document.querySelectorAll('.custom-rating:not(.deactivate)');
+    Array.prototype.forEach.call(custom_rating, function (item, index) {
+        customRatingListener.call(item);
+    });
+}
+
+// Main function
+function customRatingListener() {
+    let stars = this.querySelectorAll('.custom-rating-star');
+
+    Array.prototype.forEach.call(stars, function (item, index) {
+        item.addEventListener('mouseover', starsHover, false);
+        item.addEventListener('mouseout', starsDefault, false);
+        item.addEventListener('click', starClick, false);
+    });
+    ajaxUpdateRating.call(this);
+}
+
+// Setup global rating params
+function setParams() {
+    let star = this.querySelector('.custom-rating-star'),
+        extension = '',
+        translations = checkGetAndUpdateTranslations();
+
+    if (star.hasAttribute('src')) {
+        let star_url = star.src.split('.');
+        extension = star_url[star_url.length - 1];
+    }
+    cr_params = {
+        'img_dir': this.getAttribute('data-imgdir'),
+        'type': this.getAttribute('data-type'),
+        'id': this.getAttribute('data-crid'),
+        'nonce': custom_rating.custom_rating_nonce,
+        'message_thanks': translations.thanks,
+        'message_rated': translations.rated,
+        'ajax_url': custom_rating.url,
+        'stars_type': this.getAttribute('data-stars'),
+        'extension': extension,
+        'tooltip': false,
+        'ajax_update': Number(this.parentNode.getAttribute('data-ajax')) === 1 ? true : false,
+        'function_type': this.parentNode.getAttribute('data-function'),
+        'disabled': this.parentNode.querySelector('.custom-ratting-params').getAttribute('data-disabled'),
+        'ajax_updated': false,
+    };
+}
+
+function checkGetAndUpdateTranslations(translations) {
+    let cookie_translations = getCookie('rating_translations'),
+        default_translations = JSON.stringify({
+            'thanks': custom_rating.thanks,
+            'rated': custom_rating.rated
+        });
+    switch (true) {
+        // When new translations come from ajax (for ignore cache)
+        case (translations && translations !== cookie_translations) :
+            updateTranslationsCookie.call(translations)
+            break;
+        // When the translations were updated
+        case (default_translations !== cookie_translations) :
+            translations = default_translations;
+            updateTranslationsCookie.call(translations)
+            break;
+        // When the cookies are empty
+        case(!cookie_translations):
+            translations = JSON.stringify(default_translations);
+            updateTranslationsCookie.call(translations)
+            break;
+        default:
+            translations = cookie_translations;
+    }
+    return JSON.parse(translations);
+}
+
+function updateTranslationsCookie() {
+    let date = new Date(new Date().getTime() + 86400 * 1000); // 1 day
+    document.cookie = 'rating_translations=' + this + '; path=/; expires=' + date.toUTCString();
+}
+
+// Change all stars state that stay after active star
+function starsHover() {
+    let current_index = this.getAttribute('data-index'),
+        stars = this.parentNode.querySelectorAll('.custom-rating-star');
+    Array.prototype.forEach.call(stars, function (item, index) {
+        if (current_index >= index) {
+            setHoverStar.call(item);
+        }
+    })
+}
+
+// Change all stars stars to default state
+function starsDefault() {
+    let stars = this.parentNode.querySelectorAll('.custom-rating-star');
+    Array.prototype.forEach.call(stars, function (item, index) {
+        setDefaultStar.call(item);
+    })
+}
+
+// Change star state on hover
+function setHoverStar() {
+    if ('images' === cr_params.stars_type) {
+        this.setAttribute('src', cr_params.img_dir + 'hover.' + cr_params.extension);
+    } else {
+        this.setAttribute('class', 'icon-star hover custom-rating-star');
+    }
+}
+
+// Change star to default state
+function setDefaultStar() {
+    let defaultStar = this.getAttribute('data-nimg');
+    if ('images' === cr_params.stars_type) {
+        this.setAttribute('src', cr_params.img_dir + defaultStar);
+    } else {
+        this.classList.remove('hover', 'icon-star');
+        this.classList.add(defaultStar);
+    }
+}
+
+// Doing when star was clicked
+function starClick() {
+    let rating = Number(this.getAttribute('data-index')) + 1;
+    if (!getCookie('already_rating_' + cr_params.type + cr_params.id)) {
+        sendRating.call(this, rating);
+    } else {
+        showTooltip.call(this, cr_params.message_rated);
+    }
+}
+
+// Request to update rating value
+function sendRating(rating) {
+    let xhr = new XMLHttpRequest(),
+        params = 'id=' + cr_params.id + '&rating=' + rating + '&type=update' + '&custom_rating_nonce=' + cr_params.nonce,
+        action = (cr_params.type === 'post') ? 'post_rating' : 'taxonomy_rating',
+        context = this;
+    let date = new Date(new Date().getTime() + 86400 * 1000); // 1 day
+
+    document.cookie = "already_rating_" + cr_params.type + cr_params.id + "=yes;expires=" + date.toUTCString();
+    xhr.open('POST', cr_params.ajax_url + '?action=' + action);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            let response = JSON.parse(xhr.responseText);
+            if (response.success === true) {
+                showTooltip.call(context, response.message);
+                setTimeout(ajaxUpdateRating.bind(context.parentNode, true), 5000);
+            } else {
+                showTooltip.call(context, response.message);
+            }
+        }
+    };
+    xhr.send(params);
+}
+
+function ajaxUpdateRating(force) {
+    if (true === cr_params.ajax_update && cr_params.ajax_updated === false || force === true) {
+        let data = new FormData(),
+            xhr = new XMLHttpRequest(),
+            wrapper = this.closest('.custom-ratting-container'),
+            rated = getCookie('already_rating_' + cr_params.type + cr_params.id) ? getCookie('already_rating_' + cr_params.type + cr_params.id) : '';
+        data.append("function", cr_params.function_type);
+        if (cr_params.function_type === 'part') {
+            data.append("tag", wrapper.attributes.getNamedItem('data-part').value);
+        }
+        data.append("action", "get_rating_data");
+        data.append("id", cr_params.id);
+        data.append("type", cr_params.type);
+        data.append("disabled", cr_params.disabled);
+        data.append("custom_rating_nonce", cr_params.nonce);
+        data.append("rated", rated);
+        xhr.withCredentials = true;
+        xhr.open("POST", cr_params.ajax_url);
+        xhr.send(data);
+        xhr.addEventListener("readystatechange", function () {
+            if (this.readyState === 4) {
+                let div = document.createElement('div');
+                div.innerHTML = this.responseText.trim();
+                let html = div.firstChild;
+                wrapper.innerHTML = '';
+                wrapper.innerHTML = html.innerHTML;
+                cr_params.ajax_updated = true;
+                customRatingRun();
+            }
+        });
+    }
+}
+
+function showTooltip(message) {
+    if (message && !cr_params.tooltip) {
+        let node = document.createElement("span");
+        node.classList.add('tax-rating-alert');
+        let textnode = document.createTextNode(message);
+        node.appendChild(textnode);
+        this.parentNode.appendChild(node);
+        cr_params.tooltip = true;
+        setTimeout(removeTooltip.bind(this), 5000);
+    }
+}
+
+function removeTooltip() {
+    cr_params.tooltip = false;
+    this.parentNode.querySelector('span').outerHTML = "";
+}
+
+
+function getCookie(name) {
+    let matches = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+    return matches ? decodeURIComponent(matches[1]) : undefined;
+}
+
+// Polyfill function "closest" for a loved IE
+
+(function (ELEMENT) {
+    ELEMENT.matches = ELEMENT.matches || ELEMENT.mozMatchesSelector || ELEMENT.msMatchesSelector || ELEMENT.oMatchesSelector || ELEMENT.webkitMatchesSelector;
+    ELEMENT.closest = ELEMENT.closest || function closest(selector) {
+        if (!this) return null;
+        if (this.matches(selector)) return this;
+        if (!this.parentElement) {
+            return null
+        } else return this.parentElement.closest(selector)
+    };
+}(Element.prototype));

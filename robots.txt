@@ -1,0 +1,23 @@
+User-agent: *
+Allow: *.js
+Allow: *.css
+Allow: *.png
+Allow: *.jpg
+Disallow: /feed/turbopage/
+Disallow: /payments/
+Disallow: /feed/turbopost/
+Disallow: /feed/turbopost/*
+Disallow: /wp-login.php
+Disallow: /wp-register.php
+Disallow: /wp-json/
+Disallow: /cgi-bin/
+Disallow: /uncategorized/
+Disallow: /author/
+Disallow: */trackback/
+Disallow: /go/
+Disallow: */resources.xml/
+Disallow: /?repeat=w3tc
+Disallow: /category/
+Disallow: /?p=*
+
+Sitemap: https://azino.tech/sitemap.xml
