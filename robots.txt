@@ -19,5 +19,3 @@ Disallow: */resources.xml/
 Disallow: /?repeat=w3tc
 Disallow: /category/
 Disallow: /?p=*
-
-Sitemap: https://azino.tech/sitemap.xml
