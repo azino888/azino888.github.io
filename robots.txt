@@ -18,3 +18,5 @@ Disallow: */resources.xml/
 Disallow: /?repeat=w3tc
 Disallow: /category/
 Disallow: /?p=*
+Host: https://azino888.github.io
+Sitemap: https://azino888.github.io/sitemap.xml
